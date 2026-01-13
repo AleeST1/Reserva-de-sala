@@ -1,6 +1,6 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyPublisher "Rinaldi"
 
 [Setup]
@@ -21,14 +21,14 @@ ArchitecturesInstallIn64BitMode=x64
 VersionInfoVersion={#MyAppVersion}
 
 [Files]
-Source: "dist\Sistema_Reservas_Salas.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\Reservas de Salas.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
 Name: "desktopicon"; Description: "Criar atalho na Área de Trabalho"; Flags: unchecked
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\Sistema_Reservas_Salas.exe"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\Sistema_Reservas_Salas.exe"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\Reservas_de_Salas.exe"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\Reservas_de_Salas.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Sistema_Reservas_Salas.exe"; Description: "Executar {#MyAppName}"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Reservas_de_Salas.exe"; Description: "Executar {#MyAppName}"; Flags: postinstall nowait skipifsilent

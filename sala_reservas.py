@@ -11,8 +11,8 @@ import webbrowser
 import requests
 from packaging.version import parse as vparse
 
-APP_VERSION = "1.0.0"
-VERSION_JSON_URL = "https://exemplo.com/version.json"
+APP_VERSION = "1.0.1"
+VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
     def __init__(self, root, current_version, json_url, timeout=5):
@@ -144,6 +144,8 @@ class SistemaReservas:
         # Variável para controlar o temporizador de atualização automática
         self.update_timer = None
         self.update_interval = 10000  # Intervalo de atualização em milissegundos (10 segundos)
+        self.cleanup_timer = None
+        self.cleanup_interval = 86400000
 
         # Configurar estilo moderno
         self.style = ttk.Style()
@@ -306,6 +308,7 @@ class SistemaReservas:
         
         # Iniciar o temporizador para atualização automática
         self.iniciar_atualizacao_automatica()
+        self.iniciar_limpeza_automatica()
         self.root.after(200, lambda: schedule_update_check(self.root))
 
     def carregar_logo(self):
@@ -1079,6 +1082,31 @@ class SistemaReservas:
             print(f"Erro na atualização automática: {e}")
             # Sempre agendar a próxima atualização, mesmo em caso de erro
             self.update_timer = self.root.after(self.update_interval, self.executar_atualizacao_automatica)
+
+    def limpar_reservas_expiradas(self):
+        try:
+            if not hasattr(self, 'conn') or self.conn is None or not self.conn.is_connected():
+                self.conectar_bd()
+            self.cursor.execute("DELETE FROM reservas WHERE DATEDIFF(CURDATE(), data) >= %s", (5,))
+            self.conn.commit()
+        except mysql.connector.Error as err:
+            print(f'Erro ao limpar reservas expiradas: {err}')
+        except Exception as e:
+            print(e)
+
+    def iniciar_limpeza_automatica(self):
+        if self.cleanup_timer is not None:
+            self.root.after_cancel(self.cleanup_timer)
+        self.limpar_reservas_expiradas()
+        self.cleanup_timer = self.root.after(self.cleanup_interval, self.executar_limpeza_automatica)
+
+    def executar_limpeza_automatica(self):
+        try:
+            self.limpar_reservas_expiradas()
+        except Exception as e:
+            print(e)
+        finally:
+            self.cleanup_timer = self.root.after(self.cleanup_interval, self.executar_limpeza_automatica)
 
 if __name__ == '__main__':
     try:
