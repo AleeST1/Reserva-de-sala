@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Sala</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .time-slot {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            align-items: center;
+            justify-items: center;
+            transition: transform 0.2s;
+        }
+
+        .time {
+            font-weight: bold;
+            color: #333;
+            padding: 8px;
+            width: 100%;
+            text-align: left;
+            margin-left: 20px;
+        }
+
+        .status {
+            padding: 8px 12px;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+            box-sizing: border-box;
+            display: inline-block;
+            width: 100%;
+            max-width: 120px;
+            margin: 0 auto;
+        }
+
+        .status.available {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status.occupied {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .select-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+            width: 100%;
+            max-width: 120px;
+            box-sizing: border-box;
+        }
+
+        .select-button.available {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .select-button.occupied {
+            background-color: #f44336;
+            color: white;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .select-button:hover:not(.occupied) {
+            opacity: 0.9;
+        }
+
+        .time-slot:hover {
+            transform: translateY(-2px);
+        }
+
+        .reservations {
+            margin-top: 30px;
+            border-top: 2px solid #ddd;
+            padding-top: 20px;
+        }
+
+        .reservations h2 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .reservation-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .reservation-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            align-items: center;
+            text-align: center;
+        }
+
+        .reservation-item:nth-child(even) {
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>Horário</div>
+            <div>Status</div>
+            <div>Ação</div>
+        </div>
+        <div class="time-slot">
+            <div class="time">08:00 - 09:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">09:00 - 10:00</div>
+            <div class="status occupied">Ocupado</div>
+            <button class="select-button occupied" disabled>Indisponível</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">10:00 - 11:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">11:00 - 12:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">12:00 - 13:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">13:00 - 14:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">14:00 - 15:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">15:00 - 16:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="time-slot">
+            <div class="time">16:00 - 17:00</div>
+            <div class="status available">Disponível</div>
+            <button class="select-button available">Selecionar</button>
+        </div>
+
+        <div class="reservations">
+            <h2>Reservas Atuais</h2>
+            <div class="reservation-list">
+                <div class="reservation-item">
+                    <div>Sala</div>
+                    <div>Data</div>
+                    <div>Horário</div>
+                    <div>Solicitante</div>
+                </div>
+                <!-- Reservation items will be dynamically added here -->
+                <div class="reservation-item">
+                    <div>Sala Pequena</div>
+                    <div>15/05/2023</div>
+                    <div>09:00 - 10:00</div>
+                    <div>João Silva</div>
+                </div>
+                <div class="reservation-item">
+                    <div>Sala Média</div>
+                    <div>15/05/2023</div>
+                    <div>14:00 - 15:00</div>
+                    <div>Maria Oliveira</div>
+                </div>
+                <div class="reservation-item">
+                    <div>Sala Auditório</div>
+                    <div>16/05/2023</div>
+                    <div>10:00 - 12:00</div>
+                    <div>Carlos Santos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

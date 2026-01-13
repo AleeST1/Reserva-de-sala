@@ -1,0 +1,7 @@
+# Python packages required for the Sala Reservas application
+requests
+packaging
+tkcalendar
+mysql-connector-python
+pillow
+pyinstaller

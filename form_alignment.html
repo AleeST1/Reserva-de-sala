@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulário de Reserva</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 200px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .time-container {
+            display: flex;
+            justify-content: flex-start;
+            margin-top: 10px;
+            width: 200px;
+            margin-left: 50px;
+            margin-right: auto;
+        }
+
+        .time-input {
+            display: flex;
+            align-items: center;
+        }
+
+        .time-input:first-child {
+            margin-right: 20px;
+        }
+
+        .time-input:last-child {
+            margin-left: 0;
+        }
+
+        .time-input label {
+            margin-right: 5px;
+            margin-bottom: 0;
+            width: auto;
+            text-align: right;
+        }
+
+        .time-input input {
+            width: 80px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-group">
+            <label for="solicitante">Nome do Solicitante:</label>
+            <input type="text" id="solicitante">
+        </div>
+
+        <div class="form-group">
+            <label for="data">Data:</label>
+            <input type="text" id="data">
+            <button>Selecionar Data</button>
+        </div>
+
+        <div class="form-group">
+            <label>Horário:</label>
+            <div class="time-container">
+                <div class="time-input">
+                    <label for="inicio">Início:</label>
+                    <input type="text" id="inicio">
+                </div>
+                <div class="time-input">
+                    <label for="fim">Fim:</label>
+                    <input type="text" id="fim">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
