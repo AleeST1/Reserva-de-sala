@@ -1,6 +1,6 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyPublisher "Rinaldi"
 
 [Setup]
@@ -19,6 +19,9 @@ SetupIconFile=resources\icone_completo.ico
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64
 VersionInfoVersion={#MyAppVersion}
+CloseApplications=yes
+RestartApplications=yes
+UsePreviousAppDir=yes
 
 [Files]
 Source: "dist\Reservas de Salas.exe"; DestDir: "{app}"; Flags: ignoreversion

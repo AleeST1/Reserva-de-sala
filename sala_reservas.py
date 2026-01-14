@@ -14,8 +14,9 @@ import tempfile
 import subprocess
 import shutil
 import ctypes
+import winreg
 
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
@@ -126,13 +127,60 @@ class InAppUpdater:
         pb["value"] = d if t > 0 else 0
         status.configure(text=f"Baixando... {d//1024} KB")
     def _install(self, path):
-        res = self._run_elevated(path, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART")
-        if res <= 32:
+        try:
+            cmd = [
+                "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+                f"Start-Process -FilePath '\"{path}\"' -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Verb RunAs -Wait"
+            ]
+            subprocess.run(cmd, check=True)
+            messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
+        except Exception as e:
             try:
-                subprocess.Popen([path], shell=False)
-            except Exception:
                 os.startfile(path)
-        self.root.after(800, self.root.destroy)
+                messagebox.showinfo('Atualização', 'Instalador aberto. Conclua a instalação e reinicie o app.')
+            except Exception:
+                messagebox.showerror('Atualização', f'Falha ao executar instalador: {e}')
+        finally:
+            exe = self._installed_exe_path()
+            try:
+                if exe and os.path.exists(exe):
+                    subprocess.Popen([exe], shell=False)
+                else:
+                    subprocess.Popen([sys.executable], shell=False)
+            except Exception:
+                pass
+            self.root.after(500, self.root.destroy)
+    def _installed_exe_path(self):
+        names = ["Sistema Reservas de Salas", "Reservas de Salas"]
+        views = [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]
+        roots = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
+        for root in roots:
+            for view in views:
+                try:
+                    with winreg.OpenKey(root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", 0, winreg.KEY_READ | view) as h:
+                        i = 0
+                        while True:
+                            try:
+                                sub = winreg.EnumKey(h, i)
+                                i += 1
+                            except OSError:
+                                break
+                            try:
+                                with winreg.OpenKey(h, sub) as k:
+                                    dn, _ = winreg.QueryValueEx(k, "DisplayName")
+                                    if any(n in dn for n in names):
+                                        try:
+                                            app_path, _ = winreg.QueryValueEx(k, "Inno Setup: App Path")
+                                        except OSError:
+                                            app_path = None
+                                        if app_path:
+                                            p = os.path.join(app_path, "Reservas de Salas.exe")
+                                            return p
+                            except OSError:
+                                continue
+                except OSError:
+                    continue
+        return None
     def _run_elevated(self, exe, args):
         try:
             return ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, args, None, 1)
