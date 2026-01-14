@@ -1,5 +1,5 @@
 {
-  "latest": "1.0.2",
-  "download_url": "https://github.com/AleeST1/Reserva-de-sala/releases/download/v1.0.2/Sistema_Reservas_Salas-1.0.2-Setup.exe",
+  "latest": "1.0.3",
+  "download_url": "https://github.com/AleeST1/Reserva-de-sala/releases/download/latest/Sistema_Reservas_Salas-Setup.exe",
   "changelog": "- Correções de estabilidade\n- Melhorias de desempenho\n- Novos recursos de relatório"
 }

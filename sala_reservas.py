@@ -10,8 +10,12 @@ import threading
 import webbrowser
 import requests
 from packaging.version import parse as vparse
+import tempfile
+import subprocess
+import shutil
+import ctypes
 
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
@@ -61,11 +65,17 @@ class UpdateChecker:
         btns = ttk.Frame(container)
         btns.grid(row=5, column=0, sticky="ew", pady=(16,0))
         btns.columnconfigure(0, weight=1)
+        btns.columnconfigure(1, weight=1)
+        btns.columnconfigure(2, weight=1)
+        def on_in_app_update():
+            InAppUpdater(self.root).download_and_install(download_url)
+            top.destroy()
         def on_download():
             webbrowser.open(download_url)
             top.destroy()
-        ttk.Button(btns, text="Baixar agora", command=on_download).grid(row=0, column=0, sticky="w")
-        ttk.Button(btns, text="Depois", command=top.destroy).grid(row=0, column=1, sticky="e")
+        ttk.Button(btns, text="Atualizar automaticamente", command=on_in_app_update).grid(row=0, column=0, sticky="w")
+        ttk.Button(btns, text="Baixar agora", command=on_download).grid(row=0, column=1, sticky="w")
+        ttk.Button(btns, text="Depois", command=top.destroy).grid(row=0, column=2, sticky="e")
         top.update_idletasks()
         w = top.winfo_width()
         h = top.winfo_height()
@@ -75,6 +85,59 @@ class UpdateChecker:
 
 def schedule_update_check(root):
     UpdateChecker(root, APP_VERSION, VERSION_JSON_URL, timeout=5).start()
+
+class InAppUpdater:
+    def __init__(self, root):
+        self.root = root
+    def download_and_install(self, url):
+        top = tk.Toplevel(self.root)
+        top.title("Atualizando")
+        f = ttk.Frame(top, padding=12)
+        f.grid(row=0, column=0, sticky="nsew")
+        status = ttk.Label(f, text="Preparando...")
+        status.grid(row=0, column=0, sticky="w")
+        pb = ttk.Progressbar(f, length=380, mode="determinate")
+        pb.grid(row=1, column=0, pady=8, sticky="ew")
+        top.columnconfigure(0, weight=1)
+        top.rowconfigure(0, weight=1)
+        def worker():
+            try:
+                r = requests.get(url, stream=True, timeout=20)
+                r.raise_for_status()
+                total = int(r.headers.get("Content-Length") or 0)
+                ext = os.path.splitext(url)[1] or ".exe"
+                d = tempfile.mkdtemp(prefix="reserva_update_")
+                p = os.path.join(d, "update"+ext)
+                done = 0
+                with open(p, "wb") as fp:
+                    for chunk in r.iter_content(8192):
+                        if not chunk:
+                            continue
+                        fp.write(chunk)
+                        done += len(chunk)
+                        if total > 0:
+                            self.root.after(0, lambda dd=done, tt=total: self._progress(pb, status, dd, tt))
+                self.root.after(0, lambda pp=p: self._install(pp))
+            except Exception as e:
+                self.root.after(0, lambda: status.configure(text=f"Erro: {e}"))
+        threading.Thread(target=worker, daemon=True).start()
+    def _progress(self, pb, status, d, t):
+        pb["maximum"] = t or 100
+        pb["value"] = d if t > 0 else 0
+        status.configure(text=f"Baixando... {d//1024} KB")
+    def _install(self, path):
+        res = self._run_elevated(path, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART")
+        if res <= 32:
+            try:
+                subprocess.Popen([path], shell=False)
+            except Exception:
+                os.startfile(path)
+        self.root.after(800, self.root.destroy)
+    def _run_elevated(self, exe, args):
+        try:
+            return ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, args, None, 1)
+        except Exception:
+            return 0
 
 class SistemaReservas:
     def __init__(self, root):
