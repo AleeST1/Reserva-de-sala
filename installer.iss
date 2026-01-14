@@ -1,6 +1,6 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyPublisher "Rinaldi"
 
 [Setup]
@@ -27,8 +27,8 @@ Source: "dist\Reservas de Salas.exe"; DestDir: "{app}"; Flags: ignoreversion
 Name: "desktopicon"; Description: "Criar atalho na Área de Trabalho"; Flags: unchecked
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\Reservas_de_Salas.exe"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\Reservas_de_Salas.exe"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\Reservas de Salas.exe"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\Reservas de Salas.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Reservas_de_Salas.exe"; Description: "Executar {#MyAppName}"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Reservas de Salas.exe"; Description: "Executar {#MyAppName}"; Flags: postinstall nowait skipifsilent

@@ -11,7 +11,7 @@ import webbrowser
 import requests
 from packaging.version import parse as vparse
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
@@ -312,10 +312,8 @@ class SistemaReservas:
         self.configurar_estilo_treeview()
         
         self.root.after(300, self.iniciar_db)
-        
-        # Iniciar o temporizador para atualização automática
-        self.iniciar_atualizacao_automatica()
-        self.iniciar_limpeza_automatica()
+        self.root.after(600, self.iniciar_atualizacao_automatica)
+        self.root.after(2000, self.iniciar_limpeza_automatica)
         self.root.after(200, lambda: schedule_update_check(self.root))
 
     def carregar_logo(self):
@@ -1067,11 +1065,6 @@ class SistemaReservas:
         # Cancelar qualquer temporizador existente para evitar múltiplas instâncias
         if self.update_timer is not None:
             self.root.after_cancel(self.update_timer)
-        
-        # Executar uma atualização imediata antes de programar a próxima
-        self.atualizar_lista_reservas()
-        
-        # Programar a próxima atualização
         self.update_timer = self.root.after(self.update_interval, self.executar_atualizacao_automatica)
     
     def executar_atualizacao_automatica(self):
@@ -1104,7 +1097,7 @@ class SistemaReservas:
     def iniciar_limpeza_automatica(self):
         if self.cleanup_timer is not None:
             self.root.after_cancel(self.cleanup_timer)
-        self.limpar_reservas_expiradas()
+        self.root.after(15000, self.limpar_reservas_expiradas)
         self.cleanup_timer = self.root.after(self.cleanup_interval, self.executar_limpeza_automatica)
 
     def executar_limpeza_automatica(self):
