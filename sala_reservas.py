@@ -14,9 +14,10 @@ import tempfile
 import subprocess
 import shutil
 import ctypes
+import time
 import winreg
 
-APP_VERSION = "1.0.5"
+APP_VERSION = "1.0.6"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
@@ -128,12 +129,14 @@ class InAppUpdater:
         status.configure(text=f"Baixando... {d//1024} KB")
     def _install(self, path):
         try:
+            log_dir = os.path.dirname(path)
+            log_path = os.path.join(log_dir, 'update_install.log')
+            args = f"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /LOG=\"{log_path}\""
             cmd = [
                 "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
-                f"Start-Process -FilePath '\"{path}\"' -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Verb RunAs -Wait"
+                f"Start-Process -FilePath '\"{path}\"' -ArgumentList '{args}' -Verb RunAs -Wait"
             ]
             subprocess.run(cmd, check=True)
-            messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
         except Exception as e:
             try:
                 os.startfile(path)
@@ -141,10 +144,12 @@ class InAppUpdater:
             except Exception:
                 messagebox.showerror('Atualização', f'Falha ao executar instalador: {e}')
         finally:
+            time.sleep(1)
             exe = self._installed_exe_path()
             try:
                 if exe and os.path.exists(exe):
                     subprocess.Popen([exe], shell=False)
+                    messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
                 else:
                     subprocess.Popen([sys.executable], shell=False)
             except Exception:
