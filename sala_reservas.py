@@ -189,6 +189,13 @@ class SistemaReservas:
                       foreground=[('active', 'white'), ('!disabled', 'white'), ('disabled', '#6c757d')],
                       relief=[('pressed', 'flat')])
 
+        menubar = tk.Menu(self.root)
+        ajuda_menu = tk.Menu(menubar, tearoff=0)
+        ajuda_menu.add_command(label='Verificar atualizações agora', command=lambda: schedule_update_check(self.root))
+        ajuda_menu.add_command(label='Sobre', command=lambda: messagebox.showinfo('Sobre', f'Versão atual: {APP_VERSION}'))
+        menubar.add_cascade(label='Ajuda', menu=ajuda_menu)
+        self.root.config(menu=menubar)
+
         # Frame principal com sombra e borda arredondada
         self.main_frame = ttk.Frame(self.root, style='MainFrame.TFrame')
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=5)
