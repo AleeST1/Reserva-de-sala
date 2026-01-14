@@ -1,6 +1,6 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.4"
 #define MyPublisher "Rinaldi"
 
 [Setup]

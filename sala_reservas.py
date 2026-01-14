@@ -15,7 +15,7 @@ import subprocess
 import shutil
 import ctypes
 
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
@@ -572,57 +572,43 @@ class SistemaReservas:
         self.hora_fim_var.set('')
         
     def atualizar_lista_reservas(self):
-        # Limpar itens existentes
+        # Limpar itens existentes rapidamente, sem bloquear em consultas
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
-        try:
-            # Sempre fechar e reconectar ao banco de dados para garantir dados atualizados
-            if hasattr(self, 'conn') and self.conn is not None:
-                try:
-                    if self.conn.is_connected():
-                        self.cursor.close()
-                        self.conn.close()
-                except Exception as e:
-                    print(f"Erro ao fechar conexão existente: {e}")
-            
-            # Estabelecer uma nova conexão
+        
+        def worker():
             try:
-                self.conectar_bd()
-                print("Conexão estabelecida para atualização da lista")
+                if not hasattr(self, 'conn') or self.conn is None or not self.conn.is_connected():
+                    self.conectar_bd()
+                self.cursor.execute('''
+                    SELECT sala, data, TIME_FORMAT(hora_inicio, '%H:%i') as hora_inicio, 
+                           TIME_FORMAT(hora_fim, '%H:%i') as hora_fim, solicitante
+                    FROM reservas
+                    ORDER BY data, hora_inicio
+                ''')
+                reservas = self.cursor.fetchall()
+                self.root.after(0, lambda rs=reservas: self._preencher_tree_em_lotes(rs, 200, 0))
+            except mysql.connector.Error as err:
+                print(f'Erro ao buscar reservas: {err}')
             except Exception as e:
-                print(f"Erro ao conectar ao banco de dados: {e}")
-                return  # Sair da função se não conseguir conectar
-            
-            # Buscar todas as reservas com uma conexão fresca
-            self.cursor.execute('''
-                SELECT sala, data, TIME_FORMAT(hora_inicio, '%H:%i') as hora_inicio, 
-                       TIME_FORMAT(hora_fim, '%H:%i') as hora_fim, solicitante
-                FROM reservas
-                ORDER BY data, hora_inicio
-            ''')
-            reservas = self.cursor.fetchall()
-            
-            # Adicionar reservas na Treeview com cores alternadas
-            for i, reserva in enumerate(reservas):
-                sala = reserva[0]
-                data = reserva[1].strftime('%d/%m/%Y')
-                horario = f'{reserva[2]} - {reserva[3]}'
-                solicitante = reserva[4]
-                # Aplicar tag 'odd' ou 'even' para alternar cores das linhas
-                tag = 'odd' if i % 2 == 0 else 'even'
-                self.tree.insert('', tk.END, values=(sala, data, horario, solicitante), tags=(tag,))
-            
-            # Garantir que a configuração de estilo seja aplicada
+                print(f'Erro inesperado na atualização da lista: {e}')
+        
+        threading.Thread(target=worker, daemon=True).start()
+    
+    def _preencher_tree_em_lotes(self, reservas, batch=200, start=0):
+        end = min(start + batch, len(reservas))
+        for i in range(start, end):
+            reserva = reservas[i]
+            sala = reserva[0]
+            data = reserva[1].strftime('%d/%m/%Y')
+            horario = f"{reserva[2]} - {reserva[3]}"
+            solicitante = reserva[4]
+            tag = 'odd' if i % 2 == 0 else 'even'
+            self.tree.insert('', tk.END, values=(sala, data, horario, solicitante), tags=(tag,))
+        if end < len(reservas):
+            self.root.after(1, lambda: self._preencher_tree_em_lotes(reservas, batch, end))
+        else:
             self.configurar_estilo_treeview()
-                
-        except mysql.connector.Error as err:
-            print(f'Erro ao buscar reservas: {err}')
-            # Tentar reconectar na próxima atualização automática
-        except Exception as e:
-            print(f'Erro inesperado na atualização da lista: {e}')
-            # Usar print em vez de messagebox para erros durante atualizações automáticas
-            # para não interromper a experiência do usuário com muitas mensagens de erro
 
     def gerar_horarios_disponiveis(self):
         horarios = []
