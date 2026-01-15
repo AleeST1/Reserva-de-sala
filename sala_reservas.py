@@ -20,10 +20,10 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "v1.1.1"
+APP_VERSION = "v1.1.2"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
-DIAG_DISABLE_STARTUP_TASKS = True
+DIAG_DISABLE_STARTUP_TASKS = False
 
 def _log_file_path():
     base = os.getenv('LOCALAPPDATA') or os.path.expanduser('~')
@@ -592,7 +592,6 @@ class SistemaReservas:
             self.conectar_bd()
             self.criar_tabelas()
             self.atualizar_lista_reservas()
-            self._init_notificador_reservas()
         except Exception as e:
             logging.exception('iniciar_db error', exc_info=e)
             print(e)
@@ -746,9 +745,6 @@ class SistemaReservas:
             ''', (self.sala_var.get(), self.nome_var.get(), data_obj, hora_inicio_obj, hora_fim_obj))
 
             self.conn.commit()
-            inserted_id = self.cursor.lastrowid
-            if inserted_id:
-                self._self_insert_ids.add(inserted_id)
             messagebox.showinfo('Sucesso', 'Reserva adicionada com sucesso!')
             
             # Limpar os campos após adicionar
@@ -1322,7 +1318,6 @@ class SistemaReservas:
             
             # Atualizar a lista de reservas (isso já inclui reconexão ao banco)
             self.atualizar_lista_reservas()
-            self.verificar_novas_reservas()
             
             # Agendar a próxima atualização
             self.update_timer = self.root.after(self.update_interval, self.executar_atualizacao_automatica)
@@ -1330,67 +1325,6 @@ class SistemaReservas:
             print(f"Erro na atualização automática: {e}")
             # Sempre agendar a próxima atualização, mesmo em caso de erro
             self.update_timer = self.root.after(self.update_interval, self.executar_atualizacao_automatica)
-
-    def _init_notificador_reservas(self):
-        try:
-            if not hasattr(self, 'conn') or self.conn is None or not self.conn.is_connected():
-                self.conectar_bd()
-            self.cursor.execute("SELECT COALESCE(MAX(id), 0) FROM reservas")
-            row = self.cursor.fetchone()
-            self.last_seen_reserva_id = int(row[0] or 0)
-        except Exception:
-            pass
-
-    def verificar_novas_reservas(self):
-        def worker():
-            try:
-                if not hasattr(self, 'conn') or self.conn is None or not self.conn.is_connected():
-                    self.conectar_bd()
-                self.cursor.execute("""
-                    SELECT id, sala, solicitante, data,
-                           TIME_FORMAT(hora_inicio, '%H:%i') as hi,
-                           TIME_FORMAT(hora_fim, '%H:%i') as hf
-                    FROM reservas
-                    WHERE id > %s
-                    ORDER BY id ASC
-                    LIMIT 20
-                """, (self.last_seen_reserva_id,))
-                rows = self.cursor.fetchall()
-                if rows:
-                    max_id = self.last_seen_reserva_id
-                    for rid, sala, solicitante, data, hi, hf in rows:
-                        if rid not in getattr(self, '_self_insert_ids', set()):
-                            self.root.after(0, lambda s=sala, d=data, h1=hi, h2=hf, so=solicitante: self._mostrar_popup_nova_reserva(s, d, h1, h2, so))
-                        if rid > max_id:
-                            max_id = rid
-                    self.last_seen_reserva_id = max_id
-                    if hasattr(self, '_self_insert_ids'):
-                        self._self_insert_ids = {i for i in self._self_insert_ids if i > self.last_seen_reserva_id}
-            except Exception:
-                pass
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _mostrar_popup_nova_reserva(self, sala, data, hi, hf, solicitante):
-        top = tk.Toplevel(self.root)
-        top.title('Nova reserva')
-        top.resizable(False, False)
-        top.transient(self.root)
-        container = ttk.Frame(top, padding=16)
-        container.grid(row=0, column=0, sticky='nsew')
-        top.columnconfigure(0, weight=1)
-        top.rowconfigure(0, weight=1)
-        ttk.Label(container, text='Nova reserva criada').grid(row=0, column=0, sticky='w')
-        msg = f"Sala: {sala}\nData: {data.strftime('%d/%m/%Y') if hasattr(data, 'strftime') else str(data)}\nHorário: {hi} - {hf}\nSolicitante: {solicitante}"
-        ttk.Label(container, text=msg, justify='left').grid(row=1, column=0, sticky='w', pady=(8,0))
-        btns = ttk.Frame(container)
-        btns.grid(row=2, column=0, sticky='ew', pady=(12,0))
-        ttk.Button(btns, text='OK', command=top.destroy).grid(row=0, column=0, sticky='e')
-        top.update_idletasks()
-        w = top.winfo_width()
-        h = top.winfo_height()
-        x = (top.winfo_screenwidth() - w) // 2
-        y = (top.winfo_screenheight() - h) // 2
-        top.geometry(f"+{x}+{y}")
 
     def limpar_reservas_expiradas(self):
         try:
