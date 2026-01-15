@@ -17,7 +17,7 @@ import ctypes
 import time
 import winreg
 
-APP_VERSION = "1.0.7"
+APP_VERSION = "1.0.8"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 
 class UpdateChecker:
@@ -70,7 +70,7 @@ class UpdateChecker:
         btns.columnconfigure(1, weight=1)
         btns.columnconfigure(2, weight=1)
         def on_in_app_update():
-            InAppUpdater(self.root).download_and_install(download_url)
+            InAppUpdater(self.root).download_and_install(download_url, latest)
             top.destroy()
         def on_download():
             webbrowser.open(download_url)
@@ -91,7 +91,7 @@ def schedule_update_check(root):
 class InAppUpdater:
     def __init__(self, root):
         self.root = root
-    def download_and_install(self, url):
+    def download_and_install(self, url, expected_version):
         top = tk.Toplevel(self.root)
         top.title("Atualizando")
         f = ttk.Frame(top, padding=12)
@@ -119,7 +119,7 @@ class InAppUpdater:
                         done += len(chunk)
                         if total > 0:
                             self.root.after(0, lambda dd=done, tt=total: self._progress(pb, status, dd, tt))
-                self.root.after(0, lambda pp=p: self._install(pp))
+                self.root.after(0, lambda pp=p: self._install(pp, expected_version))
             except Exception as e:
                 self.root.after(0, lambda: status.configure(text=f"Erro: {e}"))
         threading.Thread(target=worker, daemon=True).start()
@@ -127,7 +127,7 @@ class InAppUpdater:
         pb["maximum"] = t or 100
         pb["value"] = d if t > 0 else 0
         status.configure(text=f"Baixando... {d//1024} KB")
-    def _install(self, path):
+    def _install(self, path, expected_version):
         try:
             log_dir = os.path.dirname(path)
             log_path = os.path.join(log_dir, 'update_install.log')
@@ -145,16 +145,44 @@ class InAppUpdater:
                 messagebox.showerror('Atualização', f'Falha ao executar instalador: {e}')
         finally:
             time.sleep(1)
-            exe = self._installed_exe_path()
+            ok = False
             try:
-                if exe and os.path.exists(exe):
-                    subprocess.Popen([exe], shell=False)
-                    messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
-                else:
-                    subprocess.Popen([sys.executable], shell=False)
+                inst_ver = self._installed_version()
+                if inst_ver and expected_version and vparse(inst_ver) >= vparse(expected_version):
+                    ok = True
             except Exception:
                 pass
-            self.root.after(500, self.root.destroy)
+            exe = self._installed_exe_path()
+            try:
+                if ok and exe and os.path.exists(exe):
+                    try:
+                        subprocess.Popen(['cmd', '/c', f'timeout 2 >nul && start "" "{exe}"'], creationflags=subprocess.CREATE_NO_WINDOW)
+                    except Exception:
+                        try:
+                            os.startfile(exe)
+                        except Exception:
+                            pass
+                    messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
+                    self.root.after(300, self.root.destroy)
+                elif ok:
+                    pf = os.environ.get('ProgramFiles') or r'C:\Program Files'
+                    default_exe = os.path.join(pf, 'Sistema Reservas de Salas', 'Reservas de Salas.exe')
+                    if os.path.exists(default_exe):
+                        try:
+                            subprocess.Popen(['cmd', '/c', f'timeout 2 >nul && start "" "{default_exe}"'], creationflags=subprocess.CREATE_NO_WINDOW)
+                        except Exception:
+                            try:
+                                os.startfile(default_exe)
+                            except Exception:
+                                pass
+                        messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
+                        self.root.after(300, self.root.destroy)
+                    else:
+                        messagebox.showwarning('Atualização', 'Instalação concluída, mas o executável não foi localizado. Abra pelo atalho no Menu Iniciar.')
+                else:
+                    messagebox.showwarning('Atualização', 'Instalação concluída, mas a versão não atualizou. Abra pelo atalho no Menu Iniciar ou execute o instalador manualmente.')
+            except Exception:
+                pass
     def _installed_exe_path(self):
         names = ["Sistema Reservas de Salas", "Reservas de Salas"]
         views = [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]
@@ -180,7 +208,57 @@ class InAppUpdater:
                                             app_path = None
                                         if app_path:
                                             p = os.path.join(app_path, "Reservas de Salas.exe")
-                                            return p
+                                            if os.path.exists(p):
+                                                return p
+                                        try:
+                                            di, _ = winreg.QueryValueEx(k, "DisplayIcon")
+                                            di_path = di.split(",")[0].strip().strip('"')
+                                            if di_path and os.path.exists(di_path):
+                                                return di_path
+                                        except OSError:
+                                            pass
+                                        try:
+                                            il, _ = winreg.QueryValueEx(k, "InstallLocation")
+                                            if il:
+                                                p2 = os.path.join(il, "Reservas de Salas.exe")
+                                                if os.path.exists(p2):
+                                                    return p2
+                                        except OSError:
+                                            pass
+                            except OSError:
+                                continue
+                except OSError:
+                    continue
+        for pf in [os.environ.get('ProgramFiles'), os.environ.get('ProgramFiles(x86)'), r'C:\Program Files', r'C:\Program Files (x86)']:
+            if pf:
+                p = os.path.join(pf, 'Sistema Reservas de Salas', 'Reservas de Salas.exe')
+                if os.path.exists(p):
+                    return p
+        return None
+    def _installed_version(self):
+        names = ["Sistema Reservas de Salas", "Reservas de Salas"]
+        views = [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]
+        roots = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
+        for root in roots:
+            for view in views:
+                try:
+                    with winreg.OpenKey(root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", 0, winreg.KEY_READ | view) as h:
+                        i = 0
+                        while True:
+                            try:
+                                sub = winreg.EnumKey(h, i)
+                                i += 1
+                            except OSError:
+                                break
+                            try:
+                                with winreg.OpenKey(h, sub) as k:
+                                    dn, _ = winreg.QueryValueEx(k, "DisplayName")
+                                    if any(n in dn for n in names):
+                                        try:
+                                            dv, _ = winreg.QueryValueEx(k, "DisplayVersion")
+                                            return str(dv)
+                                        except OSError:
+                                            pass
                             except OSError:
                                 continue
                 except OSError:
