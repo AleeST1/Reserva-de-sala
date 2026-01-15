@@ -18,10 +18,12 @@ import time
 import winreg
 import logging
 from pathlib import Path
+import atexit
 
-APP_VERSION = "v1.1.0"
+APP_VERSION = "v1.1.1"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
+DIAG_DISABLE_STARTUP_TASKS = True
 
 def _log_file_path():
     base = os.getenv('LOCALAPPDATA') or os.path.expanduser('~')
@@ -322,6 +324,10 @@ class SistemaReservas:
         self.root.resizable(False, False)
         self.root.configure(bg='#f8f9fa')
         logging.info('init start')
+        self.root.protocol('WM_DELETE_WINDOW', self._on_close)
+        self.root.after(1000, lambda: logging.info('alive 1s'))
+        self.root.after(2000, lambda: logging.info('alive 2s'))
+        self.root.after(5000, lambda: logging.info('alive 5s'))
         
         # Set window icon - Improved method for cross-machine compatibility
         try:
@@ -553,12 +559,15 @@ class SistemaReservas:
         self.configurar_estilo_treeview()
         logging.info('ui ready')
         
-        self.root.after(300, self.iniciar_db)
-        self.root.after(600, self.iniciar_atualizacao_automatica)
-        self.root.after(2000, self.iniciar_limpeza_automatica)
-        if ENABLE_AUTO_UPDATE_CHECK_ON_START:
-            self.root.after(200, lambda: schedule_update_check(self.root))
-        logging.info('startup tasks scheduled')
+        if not DIAG_DISABLE_STARTUP_TASKS:
+            self.root.after(300, self.iniciar_db)
+            self.root.after(600, self.iniciar_atualizacao_automatica)
+            self.root.after(2000, self.iniciar_limpeza_automatica)
+            if ENABLE_AUTO_UPDATE_CHECK_ON_START:
+                self.root.after(200, lambda: schedule_update_check(self.root))
+            logging.info('startup tasks scheduled')
+        else:
+            logging.info('startup tasks disabled')
 
     def carregar_logo(self):
         try:
@@ -585,6 +594,7 @@ class SistemaReservas:
             self.atualizar_lista_reservas()
             self._init_notificador_reservas()
         except Exception as e:
+            logging.exception('iniciar_db error', exc_info=e)
             print(e)
 
     def conectar_bd(self):
@@ -622,6 +632,7 @@ class SistemaReservas:
             ''')
             self.conn.commit()
         except mysql.connector.Error as err:
+            logging.exception('criar_tabelas error', exc_info=err)
             messagebox.showerror('Erro', f'Erro ao criar tabelas: {err}')
 
     def centralizar_janela(self, janela, largura, altura):
@@ -774,8 +785,10 @@ class SistemaReservas:
                 reservas = self.cursor.fetchall()
                 self.root.after(0, lambda rs=reservas: self._preencher_tree_em_lotes(rs, 200, 0))
             except mysql.connector.Error as err:
+                logging.exception('atualizar_lista_reservas mysql error')
                 print(f'Erro ao buscar reservas: {err}')
             except Exception as e:
+                logging.exception('atualizar_lista_reservas unexpected')
                 print(f'Erro inesperado na atualização da lista: {e}')
         
         threading.Thread(target=worker, daemon=True).start()
@@ -1404,6 +1417,26 @@ class SistemaReservas:
         finally:
             self.cleanup_timer = self.root.after(self.cleanup_interval, self.executar_limpeza_automatica)
 
+    def _on_close(self):
+        try:
+            logging.info('WM_DELETE_WINDOW received')
+        except Exception:
+            pass
+        try:
+            if self.update_timer is not None:
+                self.root.after_cancel(self.update_timer)
+        except Exception:
+            pass
+        try:
+            if self.cleanup_timer is not None:
+                self.root.after_cancel(self.cleanup_timer)
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+
 if __name__ == '__main__':
     try:
         import pyi_splash
@@ -1418,3 +1451,7 @@ if __name__ == '__main__':
         root.mainloop()
     finally:
         logging.info("mainloop exit")
+    try:
+        atexit.register(lambda: logging.info('process exit'))
+    except Exception:
+        pass
