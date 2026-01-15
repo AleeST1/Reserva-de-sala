@@ -19,8 +19,9 @@ import winreg
 import logging
 from pathlib import Path
 
-APP_VERSION = "1.0.9"
+APP_VERSION = "v1.1.0"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
+ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 
 def _log_file_path():
     base = os.getenv('LOCALAPPDATA') or os.path.expanduser('~')
@@ -320,6 +321,7 @@ class SistemaReservas:
         self.root.geometry('500x900')
         self.root.resizable(False, False)
         self.root.configure(bg='#f8f9fa')
+        logging.info('init start')
         
         # Set window icon - Improved method for cross-machine compatibility
         try:
@@ -549,11 +551,14 @@ class SistemaReservas:
         
         # Configurar estilo do Treeview
         self.configurar_estilo_treeview()
+        logging.info('ui ready')
         
         self.root.after(300, self.iniciar_db)
         self.root.after(600, self.iniciar_atualizacao_automatica)
         self.root.after(2000, self.iniciar_limpeza_automatica)
-        self.root.after(200, lambda: schedule_update_check(self.root))
+        if ENABLE_AUTO_UPDATE_CHECK_ON_START:
+            self.root.after(200, lambda: schedule_update_check(self.root))
+        logging.info('startup tasks scheduled')
 
     def carregar_logo(self):
         try:
@@ -1409,4 +1414,7 @@ if __name__ == '__main__':
     root = tk.Tk()
     _setup_error_handlers(root)
     app = SistemaReservas(root)
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        logging.info("mainloop exit")
