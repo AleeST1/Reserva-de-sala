@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.1.4"
+APP_VERSION = "1.1.5"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -782,7 +782,7 @@ class SistemaReservas:
                     SELECT sala, data, TIME_FORMAT(hora_inicio, '%H:%i') as hora_inicio, 
                            TIME_FORMAT(hora_fim, '%H:%i') as hora_fim, solicitante
                     FROM reservas
-                    ORDER BY data, hora_inicio
+                    ORDER BY id
                 ''')
                 reservas = self.cursor.fetchall()
                 self.root.after(0, lambda rs=reservas: self._preencher_tree_em_lotes(rs, 200, 0))
