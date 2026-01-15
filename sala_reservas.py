@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -204,31 +204,43 @@ class InAppUpdater:
                     ok = True
             except Exception:
                 pass
-            exe = self._installed_exe_path()
+            exe = (self._installed_exe_path() or "").strip().strip('"')
             try:
                 if exe and os.path.exists(exe):
+                    started = False
                     try:
-                        subprocess.Popen(['cmd', '/c', f'timeout 2 >nul && start "" "{exe}"'], creationflags=subprocess.CREATE_NO_WINDOW)
+                        os.startfile(exe)
+                        started = True
                     except Exception:
                         try:
-                            os.startfile(exe)
+                            subprocess.Popen([exe], close_fds=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                            started = True
                         except Exception:
-                            pass
-                    messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
-                    self.root.after(300, self.root.destroy)
+                            started = False
+                    if started:
+                        messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
+                        self.root.after(300, self.root.destroy)
+                    else:
+                        messagebox.showwarning('Atualização', 'Instalação concluída, mas o executável não pôde ser iniciado. Abra pelo atalho no Menu Iniciar.')
                 elif ok:
                     pf = os.environ.get('ProgramFiles') or r'C:\Program Files'
                     default_exe = os.path.join(pf, 'Sistema Reservas de Salas', 'Reservas de Salas.exe')
                     if os.path.exists(default_exe):
+                        started = False
                         try:
-                            subprocess.Popen(['cmd', '/c', f'timeout 2 >nul && start "" "{default_exe}"'], creationflags=subprocess.CREATE_NO_WINDOW)
+                            os.startfile(default_exe)
+                            started = True
                         except Exception:
                             try:
-                                os.startfile(default_exe)
+                                subprocess.Popen([default_exe], close_fds=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                                started = True
                             except Exception:
-                                pass
-                        messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
-                        self.root.after(300, self.root.destroy)
+                                started = False
+                        if started:
+                            messagebox.showinfo('Atualização', 'Atualização concluída. O app será reiniciado.')
+                            self.root.after(300, self.root.destroy)
+                        else:
+                            messagebox.showwarning('Atualização', 'Instalação concluída, mas o executável não pôde ser iniciado. Abra pelo atalho no Menu Iniciar.')
                     else:
                         messagebox.showwarning('Atualização', 'Instalação concluída, mas o executável não foi localizado. Abra pelo atalho no Menu Iniciar.')
                 else:
@@ -266,7 +278,11 @@ class InAppUpdater:
                                             di, _ = winreg.QueryValueEx(k, "DisplayIcon")
                                             di_path = di.split(",")[0].strip().strip('"')
                                             if di_path and os.path.exists(di_path):
-                                                return di_path
+                                                if di_path.lower().endswith('.exe'):
+                                                    return di_path
+                                                candidate = os.path.join(os.path.dirname(di_path), "Reservas de Salas.exe")
+                                                if os.path.exists(candidate):
+                                                    return candidate
                                         except OSError:
                                             pass
                                         try:
