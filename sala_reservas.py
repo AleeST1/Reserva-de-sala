@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "v1.1.2"
+APP_VERSION = "v1.1.3"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -440,7 +440,7 @@ class SistemaReservas:
         ajuda_menu = tk.Menu(menubar, tearoff=0)
         ajuda_menu.add_command(label='Verificar atualizações agora', command=lambda: schedule_update_check(self.root))
         ajuda_menu.add_command(label='Sobre', command=lambda: messagebox.showinfo('Sobre', f'Versão atual: {APP_VERSION}'))
-        menubar.add_cascade(label='Ajuda', menu=ajuda_menu)
+        menubar.add_cascade(label='Configurações', menu=ajuda_menu)
         self.root.config(menu=menubar)
 
         # Frame principal com sombra e borda arredondada
