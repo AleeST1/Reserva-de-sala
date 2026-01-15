@@ -20,10 +20,16 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "v1.1.3"
+APP_VERSION = "1.1.4"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
+
+def _norm_version(v):
+    s = str(v or "").strip()
+    if s[:1].lower() == "v":
+        s = s[1:]
+    return s
 
 def _log_file_path():
     base = os.getenv('LOCALAPPDATA') or os.path.expanduser('~')
@@ -88,7 +94,7 @@ class UpdateChecker:
             changelog = str(data.get("changelog") or "")
             if not latest or not download_url:
                 return
-            if vparse(latest) <= vparse(self.current_version):
+            if vparse(_norm_version(latest)) <= vparse(_norm_version(self.current_version)):
                 return
             self.root.after(0, lambda: self._show_popup(latest, download_url, changelog))
         except Exception:
@@ -194,13 +200,13 @@ class InAppUpdater:
             ok = False
             try:
                 inst_ver = self._installed_version()
-                if inst_ver and expected_version and vparse(inst_ver) >= vparse(expected_version):
+                if inst_ver and expected_version and vparse(_norm_version(inst_ver)) >= vparse(_norm_version(expected_version)):
                     ok = True
             except Exception:
                 pass
             exe = self._installed_exe_path()
             try:
-                if ok and exe and os.path.exists(exe):
+                if exe and os.path.exists(exe):
                     try:
                         subprocess.Popen(['cmd', '/c', f'timeout 2 >nul && start "" "{exe}"'], creationflags=subprocess.CREATE_NO_WINDOW)
                     except Exception:
