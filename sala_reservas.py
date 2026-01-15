@@ -16,9 +16,52 @@ import shutil
 import ctypes
 import time
 import winreg
+import logging
+from pathlib import Path
 
-APP_VERSION = "1.0.8"
+APP_VERSION = "1.0.9"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
+
+def _log_file_path():
+    base = os.getenv('LOCALAPPDATA') or os.path.expanduser('~')
+    d = os.path.join(base, 'SistemaReservasLogs')
+    os.makedirs(d, exist_ok=True)
+    return os.path.join(d, 'app.log')
+
+def _setup_logging():
+    try:
+        logging.basicConfig(filename=_log_file_path(), level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+        logging.info('App start')
+    except Exception:
+        pass
+
+def _tk_error_handler(exc, val, tb):
+    try:
+        logging.exception('Tk error', exc_info=(exc, val, tb))
+        messagebox.showerror('Erro', f'Falha inesperada: {val}')
+    except Exception:
+        pass
+
+def _global_excepthook(t, v, tb):
+    try:
+        logging.exception('Uncaught', exc_info=(t, v, tb))
+    except Exception:
+        pass
+
+def _thread_excepthook(args):
+    try:
+        logging.exception('Thread', exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
+    except Exception:
+        pass
+
+def _setup_error_handlers(root):
+    try:
+        root.report_callback_exception = _tk_error_handler
+        sys.excepthook = _global_excepthook
+        if hasattr(threading, 'excepthook'):
+            threading.excepthook = _thread_excepthook
+    except Exception:
+        pass
 
 class UpdateChecker:
     def __init__(self, root, current_version, json_url, timeout=5):
@@ -1362,6 +1405,8 @@ if __name__ == '__main__':
         pyi_splash.close()
     except Exception:
         pass
+    _setup_logging()
     root = tk.Tk()
+    _setup_error_handlers(root)
     app = SistemaReservas(root)
     root.mainloop()
