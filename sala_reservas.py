@@ -8,8 +8,8 @@ import sys
 from PIL import Image, ImageTk
 import threading
 import webbrowser
-import requests
-from packaging.version import parse as vparse
+import json
+import urllib.request
 import tempfile
 import subprocess
 import shutil
@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.1.8"
+APP_VERSION = "1.1.9"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -78,23 +78,23 @@ class UpdateChecker:
         self.current_version = str(current_version)
         self.json_url = json_url
         self.timeout = timeout
-        self.session = requests.Session()
 
     def start(self):
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self):
         try:
-            resp = self.session.get(self.json_url, timeout=self.timeout, headers={"User-Agent": f"App/{self.current_version}"})
-            if resp.status_code != 200:
-                return
-            data = resp.json()
+            req = urllib.request.Request(self.json_url, headers={"User-Agent": f"App/{self.current_version}"})
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                raw = r.read()
+            data = json.loads(raw.decode('utf-8', errors='ignore'))
             latest = str(data.get("latest") or data.get("version") or "")
             download_url = str(data.get("download_url") or data.get("installer_url") or "")
             changelog = str(data.get("changelog") or "")
             if not latest or not download_url:
                 return
-            if vparse(_norm_version(latest)) <= vparse(_norm_version(self.current_version)):
+            from packaging.version import parse as _pv
+            if _pv(_norm_version(latest)) <= _pv(_norm_version(self.current_version)):
                 return
             self.root.after(0, lambda: self._show_popup(latest, download_url, changelog))
         except Exception:
@@ -156,21 +156,22 @@ class InAppUpdater:
         top.rowconfigure(0, weight=1)
         def worker():
             try:
-                r = requests.get(url, stream=True, timeout=20)
-                r.raise_for_status()
-                total = int(r.headers.get("Content-Length") or 0)
-                ext = os.path.splitext(url)[1] or ".exe"
-                d = tempfile.mkdtemp(prefix="reserva_update_")
-                p = os.path.join(d, "update"+ext)
-                done = 0
-                with open(p, "wb") as fp:
-                    for chunk in r.iter_content(8192):
-                        if not chunk:
-                            continue
-                        fp.write(chunk)
-                        done += len(chunk)
-                        if total > 0:
-                            self.root.after(0, lambda dd=done, tt=total: self._progress(pb, status, dd, tt))
+                req = urllib.request.Request(url, headers={"User-Agent": "AppUpdater"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    total = int(r.getheader("Content-Length") or 0)
+                    ext = os.path.splitext(url)[1] or ".exe"
+                    d = tempfile.mkdtemp(prefix="reserva_update_")
+                    p = os.path.join(d, "update"+ext)
+                    done = 0
+                    with open(p, "wb") as fp:
+                        while True:
+                            chunk = r.read(8192)
+                            if not chunk:
+                                break
+                            fp.write(chunk)
+                            done += len(chunk)
+                            if total > 0:
+                                self.root.after(0, lambda dd=done, tt=total: self._progress(pb, status, dd, tt))
                 self.root.after(0, lambda pp=p: self._install(pp, expected_version))
             except Exception as e:
                 self.root.after(0, lambda: status.configure(text=f"Erro: {e}"))
@@ -353,7 +354,8 @@ class InAppUpdater:
                                             dv = str(dv)
                                             if best_ver:
                                                 try:
-                                                    if vparse(_norm_version(dv)) > vparse(_norm_version(best_ver)):
+                                                    from packaging.version import parse as _pv
+                                                    if _pv(_norm_version(dv)) > _pv(_norm_version(best_ver)):
                                                         best_ver = dv
                                                 except Exception:
                                                     pass
@@ -385,60 +387,10 @@ class SistemaReservas:
         self.root.after(2000, lambda: logging.info('alive 2s'))
         self.root.after(5000, lambda: logging.info('alive 5s'))
         
-        # Set window icon - Improved method for cross-machine compatibility
         try:
-            # Get resource path that works both in development and PyInstaller
-            def get_resource_path(relative_path):
-                try:
-                    # PyInstaller creates a temp folder and stores path in _MEIPASS
-                    base_path = sys._MEIPASS
-                except Exception:
-                    base_path = os.path.abspath(os.path.dirname(__file__))
-                return os.path.join(base_path, relative_path)
-            
-            # Define icon paths - Updated to use the combined icon
-            icon_primary = get_resource_path(os.path.join('resources', 'icone_completo.ico'))
-            icon_secondary = get_resource_path(os.path.join('resources', 'icone96.ico'))  # Fallback to largest icon
-            
-            # Try to set the icon with better error handling
-            icon_set = False
-            
-            # Try primary icon first (ICO format)
-            if os.path.exists(icon_primary):
-                try:
-                    self.root.iconbitmap(icon_primary)
-                    icon_set = True
-                    print(f'Ícone combinado carregado com sucesso: {icon_primary}')
-                except Exception as e:
-                    print(f'Erro ao carregar ícone combinado: {e}')
-            
-            # If primary icon failed, try secondary icon (96x96)
-            if not icon_set and os.path.exists(icon_secondary):
-                try:
-                    self.root.iconbitmap(icon_secondary)
-                    icon_set = True
-                    print(f'Ícone 96x96 carregado com sucesso: {icon_secondary}')
-                except Exception as e:
-                    print(f'Erro ao carregar ícone 96x96: {e}')
-            
-            # If both methods failed, try other available icons
-            if not icon_set:
-                for icon_size in ['72', '64', '48', '32']:
-                    icon_path = get_resource_path(os.path.join('resources', f'icone{icon_size}.ico'))
-                    if os.path.exists(icon_path):
-                        try:
-                            self.root.iconbitmap(icon_path)
-                            icon_set = True
-                            print(f'Ícone {icon_size}x{icon_size} carregado com sucesso: {icon_path}')
-                            break
-                        except Exception as e:
-                            print(f'Erro ao carregar ícone {icon_size}x{icon_size}: {e}')
-            
-            if not icon_set:
-                print('Nenhum ícone foi carregado com sucesso')
-                
-        except Exception as e:
-            print(f'Erro geral ao carregar ícones: {e}')
+            self.root.after(0, self._set_icons)
+        except Exception:
+            pass
 
 
         
@@ -492,6 +444,32 @@ class SistemaReservas:
                       foreground=[('active', 'white'), ('!disabled', 'white'), ('disabled', '#6c757d')],
                       relief=[('pressed', 'flat')])
 
+    def _set_icons(self):
+        try:
+            def get_resource_path(relative_path):
+                try:
+                    base_path = sys._MEIPASS
+                except Exception:
+                    base_path = os.path.abspath(os.path.dirname(__file__))
+                return os.path.join(base_path, relative_path)
+            paths = [
+                os.path.join('resources', 'icone_completo.ico'),
+                os.path.join('resources', 'icone96.ico'),
+                os.path.join('resources', 'icone72.ico'),
+                os.path.join('resources', 'icone64.ico'),
+                os.path.join('resources', 'icone48.ico'),
+                os.path.join('resources', 'icone32.ico'),
+            ]
+            for rel in paths:
+                p = get_resource_path(rel)
+                if os.path.exists(p):
+                    try:
+                        self.root.iconbitmap(p)
+                        return
+                    except Exception:
+                        continue
+        except Exception:
+            pass
         menubar = tk.Menu(self.root)
         ajuda_menu = tk.Menu(menubar, tearoff=0)
         ajuda_menu.add_command(label='Verificar atualizações agora', command=lambda: schedule_update_check(self.root))
