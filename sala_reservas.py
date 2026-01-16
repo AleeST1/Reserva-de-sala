@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.1.7"
+APP_VERSION = "1.1.8"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -251,62 +251,8 @@ class InAppUpdater:
         names = ["Sistema Reservas de Salas", "Reservas de Salas"]
         views = [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]
         roots = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
-        for root in roots:
-            for view in views:
-                try:
-                    with winreg.OpenKey(root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", 0, winreg.KEY_READ | view) as h:
-                        i = 0
-                        while True:
-                            try:
-                                sub = winreg.EnumKey(h, i)
-                                i += 1
-                            except OSError:
-                                break
-                            try:
-                                with winreg.OpenKey(h, sub) as k:
-                                    dn, _ = winreg.QueryValueEx(k, "DisplayName")
-                                    if any(n in dn for n in names):
-                                        try:
-                                            app_path, _ = winreg.QueryValueEx(k, "Inno Setup: App Path")
-                                        except OSError:
-                                            app_path = None
-                                        if app_path:
-                                            p = os.path.join(app_path, "Reservas de Salas.exe")
-                                            if os.path.exists(p):
-                                                return p
-                                        try:
-                                            di, _ = winreg.QueryValueEx(k, "DisplayIcon")
-                                            di_path = di.split(",")[0].strip().strip('"')
-                                            if di_path and os.path.exists(di_path):
-                                                if di_path.lower().endswith('.exe'):
-                                                    return di_path
-                                                candidate = os.path.join(os.path.dirname(di_path), "Reservas de Salas.exe")
-                                                if os.path.exists(candidate):
-                                                    return candidate
-                                        except OSError:
-                                            pass
-                                        try:
-                                            il, _ = winreg.QueryValueEx(k, "InstallLocation")
-                                            if il:
-                                                p2 = os.path.join(il, "Reservas de Salas.exe")
-                                                if os.path.exists(p2):
-                                                    return p2
-                                        except OSError:
-                                            pass
-                            except OSError:
-                                continue
-                except OSError:
-                    continue
-        for pf in [os.environ.get('ProgramFiles'), os.environ.get('ProgramFiles(x86)'), r'C:\Program Files', r'C:\Program Files (x86)']:
-            if pf:
-                p = os.path.join(pf, 'Sistema Reservas de Salas', 'Reservas de Salas.exe')
-                if os.path.exists(p):
-                    return p
-        return None
-    def _installed_version(self):
-        names = ["Sistema Reservas de Salas", "Reservas de Salas"]
-        views = [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]
-        roots = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
+        best_path = None
+        best_ver = None
         for root in roots:
             for view in views:
                 try:
@@ -324,14 +270,102 @@ class InAppUpdater:
                                     if any(n in dn for n in names):
                                         try:
                                             dv, _ = winreg.QueryValueEx(k, "DisplayVersion")
-                                            return str(dv)
+                                        except OSError:
+                                            dv = None
+                                        candidate = None
+                                        try:
+                                            app_path, _ = winreg.QueryValueEx(k, "Inno Setup: App Path")
+                                        except OSError:
+                                            app_path = None
+                                        if app_path:
+                                            p = os.path.join(app_path, "Reservas de Salas.exe")
+                                            if os.path.exists(p):
+                                                candidate = p
+                                        if not candidate:
+                                            try:
+                                                il, _ = winreg.QueryValueEx(k, "InstallLocation")
+                                            except OSError:
+                                                il = None
+                                            if il:
+                                                p2 = os.path.join(il, "Reservas de Salas.exe")
+                                                if os.path.exists(p2):
+                                                    candidate = p2
+                                        if not candidate:
+                                            try:
+                                                di, _ = winreg.QueryValueEx(k, "DisplayIcon")
+                                                di_path = di.split(",")[0].strip().strip('"')
+                                            except OSError:
+                                                di_path = None
+                                            if di_path and os.path.exists(di_path):
+                                                if di_path.lower().endswith('.exe'):
+                                                    candidate = di_path
+                                                else:
+                                                    cand = os.path.join(os.path.dirname(di_path), "Reservas de Salas.exe")
+                                                    if os.path.exists(cand):
+                                                        candidate = cand
+                                        if candidate:
+                                            if best_ver and dv:
+                                                try:
+                                                    if vparse(_norm_version(dv)) > vparse(_norm_version(best_ver)):
+                                                        best_ver = dv
+                                                        best_path = candidate
+                                                except Exception:
+                                                    pass
+                                            elif dv and not best_ver:
+                                                best_ver = dv
+                                                best_path = candidate
+                                            elif not best_path:
+                                                best_path = candidate
+                            except OSError:
+                                continue
+                except OSError:
+                    continue
+        if best_path:
+            return best_path
+        for pf in [os.environ.get('ProgramFiles'), os.environ.get('ProgramFiles(x86)'), r'C:\Program Files', r'C:\Program Files (x86)']:
+            if pf:
+                p = os.path.join(pf, 'Sistema Reservas de Salas', 'Reservas de Salas.exe')
+                if os.path.exists(p):
+                    return p
+        return None
+    def _installed_version(self):
+        names = ["Sistema Reservas de Salas", "Reservas de Salas"]
+        views = [winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]
+        roots = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
+        best_ver = None
+        for root in roots:
+            for view in views:
+                try:
+                    with winreg.OpenKey(root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", 0, winreg.KEY_READ | view) as h:
+                        i = 0
+                        while True:
+                            try:
+                                sub = winreg.EnumKey(h, i)
+                                i += 1
+                            except OSError:
+                                break
+                            try:
+                                with winreg.OpenKey(h, sub) as k:
+                                    dn, _ = winreg.QueryValueEx(k, "DisplayName")
+                                    if any(n in dn for n in names):
+                                        try:
+                                            dv, _ = winreg.QueryValueEx(k, "DisplayVersion")
+                                            dv = str(dv)
+                                            if best_ver:
+                                                try:
+                                                    if vparse(_norm_version(dv)) > vparse(_norm_version(best_ver)):
+                                                        best_ver = dv
+                                                except Exception:
+                                                    pass
+                                            else:
+                                                best_ver = dv
                                         except OSError:
                                             pass
                             except OSError:
                                 continue
                 except OSError:
                     continue
-        return None
+        return best_ver
     def _run_elevated(self, exe, args):
         try:
             return ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, args, None, 1)
