@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.5"
+APP_VERSION = "1.2.6"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -117,16 +117,11 @@ class UpdateChecker:
         btns.grid(row=5, column=0, sticky="ew", pady=(16,0))
         btns.columnconfigure(0, weight=1)
         btns.columnconfigure(1, weight=1)
-        btns.columnconfigure(2, weight=1)
         def on_in_app_update():
             InAppUpdater(self.root).download_and_install(download_url, latest)
             top.destroy()
-        def on_download():
-            webbrowser.open(download_url)
-            top.destroy()
         ttk.Button(btns, text="Atualizar automaticamente", command=on_in_app_update).grid(row=0, column=0, sticky="w")
-        ttk.Button(btns, text="Baixar agora", command=on_download).grid(row=0, column=1, sticky="w")
-        ttk.Button(btns, text="Depois", command=top.destroy).grid(row=0, column=2, sticky="e")
+        ttk.Button(btns, text="Depois", command=top.destroy).grid(row=0, column=1, sticky="e")
         top.update_idletasks()
         w = top.winfo_width()
         h = top.winfo_height()
