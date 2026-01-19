@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -481,7 +481,7 @@ class SistemaReservas:
                 if os.path.exists(p):
                     try:
                         self.root.iconbitmap(p)
-                        return
+                        break
                     except Exception:
                         continue
         except Exception:
