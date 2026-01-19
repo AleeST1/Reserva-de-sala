@@ -1,11 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from tkcalendar import Calendar
 import mysql.connector
 from datetime import datetime, timedelta
 import os
 import sys
-from PIL import Image, ImageTk
 import threading
 import webbrowser
 import json
@@ -20,7 +18,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -620,6 +618,7 @@ class SistemaReservas:
             logging.info('startup tasks disabled')
 
     def carregar_logo(self):
+        from PIL import Image, ImageTk
         try:
             try:
                 base_path = sys._MEIPASS
@@ -701,6 +700,7 @@ class SistemaReservas:
         janela.resizable(False, False)
 
     def abrir_calendario(self):
+        from tkcalendar import Calendar
         top = tk.Toplevel(self.root)
         top.title('Selecionar Data')
         cal = Calendar(top, selectmode='day', locale='pt_BR', date_pattern='dd/mm/yyyy')
