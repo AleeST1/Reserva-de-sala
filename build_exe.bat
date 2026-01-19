@@ -22,7 +22,7 @@ pip install pillow
 
 echo.
 echo Criando executavel...
-pyinstaller --onefile --windowed --icon=resources/icone_completo.ico --add-data "resources;resources" --name "Reservas de Salas" sala_reservas.py
+pyinstaller --onefile --windowed --icon=resources/icone_completo.ico --add-data "resources;resources" --exclude-module pkg_resources --exclude-module setuptools --name "Reservas de Salas" sala_reservas.py
 
 echo.
 echo ========================================

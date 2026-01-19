@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.1.9"
+APP_VERSION = "1.2.0"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -254,6 +254,7 @@ class InAppUpdater:
         roots = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
         best_path = None
         best_ver = None
+        best_mtime = 0.0
         for root in roots:
             for view in views:
                 try:
@@ -305,18 +306,33 @@ class InAppUpdater:
                                                     if os.path.exists(cand):
                                                         candidate = cand
                                         if candidate:
+                                            mtime = 0.0
+                                            try:
+                                                mtime = os.path.getmtime(candidate)
+                                            except Exception:
+                                                mtime = 0.0
                                             if best_ver and dv:
                                                 try:
-                                                    if vparse(_norm_version(dv)) > vparse(_norm_version(best_ver)):
+                                                    from packaging.version import parse as _pv
+                                                    if _pv(_norm_version(dv)) > _pv(_norm_version(best_ver)):
                                                         best_ver = dv
                                                         best_path = candidate
+                                                        best_mtime = mtime
+                                                    elif _pv(_norm_version(dv)) == _pv(_norm_version(best_ver)) and mtime > best_mtime:
+                                                        best_path = candidate
+                                                        best_mtime = mtime
                                                 except Exception:
-                                                    pass
+                                                    if mtime > best_mtime:
+                                                        best_path = candidate
+                                                        best_mtime = mtime
                                             elif dv and not best_ver:
                                                 best_ver = dv
                                                 best_path = candidate
-                                            elif not best_path:
-                                                best_path = candidate
+                                                best_mtime = mtime
+                                            else:
+                                                if mtime > best_mtime:
+                                                    best_path = candidate
+                                                    best_mtime = mtime
                             except OSError:
                                 continue
                 except OSError:
