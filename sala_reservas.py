@@ -18,7 +18,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -195,7 +195,7 @@ class InAppUpdater:
             except Exception:
                 messagebox.showerror('Atualização', f'Falha ao executar instalador: {e}')
         finally:
-            time.sleep(1)
+            time.sleep(2)
             ok = False
             try:
                 inst_ver = self._installed_version()
@@ -628,7 +628,12 @@ class SistemaReservas:
             logo_img = Image.open(logo_path)
             max_size = (280, 120)
             logo_img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            logo_img.load()
             self.logo_photo = ImageTk.PhotoImage(logo_img)
+            try:
+                logo_img.close()
+            except Exception:
+                pass
             self.logo_label = ttk.Label(self.main_frame, image=self.logo_photo)
             self.logo_label.pack(pady=5)
         except Exception as e:
