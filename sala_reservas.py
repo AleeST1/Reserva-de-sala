@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.4"
+APP_VERSION = "1.2.5"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -186,7 +186,8 @@ class InAppUpdater:
                 "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
                 f"Start-Process -FilePath '\"{path}\"' -ArgumentList '{args}' -Verb RunAs -Wait"
             ]
-            subprocess.run(cmd, check=True)
+            subprocess.Popen(cmd)
+            os._exit(0)
         except Exception as e:
             try:
                 os.startfile(path)
