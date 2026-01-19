@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.6"
+APP_VERSION = "1.2.7"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False

@@ -1,6 +1,6 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.2.6"
+#define MyAppVersion "1.2.7"
 #define MyPublisher "Rinaldi"
 #define UseOnedir
 
@@ -39,4 +39,4 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\Reservas de Salas.exe"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\Reservas de Salas.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Reservas de Salas.exe"; Description: "Executar {#MyAppName}"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Reservas de Salas.exe"; Description: "Executar {#MyAppName}"; Flags: postinstall nowait
