@@ -1,7 +1,8 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.2.3"
+#define MyAppVersion "1.2.4"
 #define MyPublisher "Rinaldi"
+#define UseOnedir
 
 [Setup]
 AppId={{E0F0ABD5-6D4B-4ED8-B0E1-9D4E427CE79B}}
@@ -24,7 +25,11 @@ RestartApplications=yes
 UsePreviousAppDir=yes
 
 [Files]
+#if defined UseOnedir
+Source: "dist\Reservas de Salas\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+#else
 Source: "dist\Reservas de Salas.exe"; DestDir: "{app}"; Flags: ignoreversion
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "Criar atalho na Área de Trabalho"; Flags: unchecked

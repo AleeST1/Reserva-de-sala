@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import mysql.connector
 from datetime import datetime, timedelta
 import os
 import sys
@@ -18,7 +17,7 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.3"
+APP_VERSION = "1.2.4"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
@@ -653,6 +652,7 @@ class SistemaReservas:
         threading.Thread(target=worker, daemon=True).start()
 
     def conectar_bd(self):
+        import mysql.connector
         try:
             self.conn = mysql.connector.connect(
                 host='RINBGWDS',
@@ -674,6 +674,7 @@ class SistemaReservas:
             messagebox.showerror('Erro', f'Erro ao conectar ao banco de dados: {err}')
 
     def criar_tabelas(self):
+        import mysql.connector
         try:
             self.cursor.execute('''
                 CREATE TABLE IF NOT EXISTS reservas (
@@ -780,6 +781,7 @@ class SistemaReservas:
             messagebox.showwarning('Aviso', 'Por favor, preencha todos os campos.')
             return
 
+        import mysql.connector
         try:
             # Verificar novamente a disponibilidade antes de adicionar
             if not self.verificar_horario_disponivel(self.hora_inicio_var.get(), self.hora_fim_var.get()):
@@ -826,6 +828,7 @@ class SistemaReservas:
             self.tree.delete(item)
         
         def worker():
+            import mysql.connector
             try:
                 if not hasattr(self, 'conn') or self.conn is None or not self.conn.is_connected():
                     self.conectar_bd()
@@ -913,6 +916,7 @@ class SistemaReservas:
             hora_inicio_obj = datetime.strptime(hora_inicio, '%H:%M').time()
             hora_fim_obj = datetime.strptime(hora_fim, '%H:%M').time()
 
+            import mysql.connector
             # Consultar reservas que se sobrepõem ao horário solicitado
             # Corrigido para permitir reservas adjacentes (ex: 09:00-10:00 e 10:00-11:00)
             self.cursor.execute("""
@@ -965,6 +969,7 @@ class SistemaReservas:
         if not all([self.sala_var.get(), self.data_var.get(), self.hora_inicio_var.get(), self.hora_fim_var.get()]):
             messagebox.showwarning('Aviso', 'Por favor, selecione sala, data, início e fim.')
             return
+        import mysql.connector
         try:
             disponivel = self.verificar_horario_disponivel(self.hora_inicio_var.get(), self.hora_fim_var.get())
             if disponivel:
@@ -1119,6 +1124,7 @@ class SistemaReservas:
             if not all([sala_var.get(), data_var.get(), hora_inicio_var.get(), hora_fim_var.get()]):
                 messagebox.showwarning('Aviso', 'Por favor, selecione sala, data, início e fim.')
                 return
+            import mysql.connector
             try:
                 data_obj = datetime.strptime(data_var.get(), '%d/%m/%Y').date()
                 hora_inicio_obj = datetime.strptime(hora_inicio_var.get(), '%H:%M').time()
@@ -1187,6 +1193,7 @@ class SistemaReservas:
                         hora_inicio_var.get(), hora_fim_var.get()]):
                 messagebox.showwarning('Aviso', 'Por favor, preencha todos os campos.')
                 return
+            import mysql.connector
             try:
                 data_obj = datetime.strptime(data_var.get(), '%d/%m/%Y').date()
                 hora_inicio_obj = datetime.strptime(hora_inicio_var.get(), '%H:%M').time()
@@ -1336,6 +1343,7 @@ class SistemaReservas:
 
         # Confirmar exclusão
         if messagebox.askyesno('Confirmar', 'Tem certeza que deseja excluir esta reserva?'):
+            import mysql.connector
             try:
                 # Converter a data para o formato do banco de dados
                 data_obj = datetime.strptime(data, '%d/%m/%Y').date()
@@ -1384,6 +1392,7 @@ class SistemaReservas:
             self.update_timer = self.root.after(self.update_interval, self.executar_atualizacao_automatica)
 
     def limpar_reservas_expiradas(self):
+        import mysql.connector
         try:
             if not hasattr(self, 'conn') or self.conn is None or not self.conn.is_connected():
                 self.conectar_bd()
@@ -1431,6 +1440,7 @@ class SistemaReservas:
 if __name__ == '__main__':
     try:
         import pyi_splash
+        pyi_splash.update_text('Inicializando...')
         pyi_splash.close()
     except Exception:
         pass
