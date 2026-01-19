@@ -17,10 +17,37 @@ import logging
 from pathlib import Path
 import atexit
 
-APP_VERSION = "1.2.7"
+APP_VERSION = "1.2.9"
 VERSION_JSON_URL = "https://aleest1.github.io/Reserva-de-sala/version.json"
 ENABLE_AUTO_UPDATE_CHECK_ON_START = False
 DIAG_DISABLE_STARTUP_TASKS = False
+
+def check_update():
+    try:
+        req = urllib.request.Request(VERSION_JSON_URL, headers={"User-Agent": f"App/{APP_VERSION}"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            raw = r.read()
+        data = json.loads(raw.decode('utf-8', errors='ignore'))
+        latest_version = str(data.get("version") or data.get("latest") or "")
+        installer_url = str(data.get("installer") or data.get("download_url") or data.get("installer_url") or "")
+        if latest_version and _norm_version(latest_version) != _norm_version(APP_VERSION):
+            return latest_version, installer_url
+        return None
+    except Exception:
+        return None
+
+def ask_update(root, version, installer_path):
+    if messagebox.askyesno(
+        "Atualização disponível",
+        f"Uma nova versão ({version}) está disponível.\nDeseja atualizar agora?"
+    ):
+        if installer_path and str(installer_path).strip():
+            InAppUpdater(root).download_and_install(installer_path, version)
+        else:
+            messagebox.showwarning("Atualização", "Instalador não disponível no momento.")
+
+def on_app_start(root):
+    schedule_update_check(root)
 
 def _norm_version(v):
     s = str(v or "").strip()
@@ -88,7 +115,7 @@ class UpdateChecker:
             latest = str(data.get("latest") or data.get("version") or "")
             download_url = str(data.get("download_url") or data.get("installer_url") or "")
             changelog = str(data.get("changelog") or "")
-            if not latest or not download_url:
+            if not latest:
                 return
             from packaging.version import parse as _pv
             if _pv(_norm_version(latest)) <= _pv(_norm_version(self.current_version)):
@@ -118,8 +145,11 @@ class UpdateChecker:
         btns.columnconfigure(0, weight=1)
         btns.columnconfigure(1, weight=1)
         def on_in_app_update():
-            InAppUpdater(self.root).download_and_install(download_url, latest)
-            top.destroy()
+            if download_url and download_url.strip():
+                InAppUpdater(self.root).download_and_install(download_url, latest)
+                top.destroy()
+            else:
+                messagebox.showwarning("Atualização", "Instalador não disponível no momento.")
         ttk.Button(btns, text="Atualizar automaticamente", command=on_in_app_update).grid(row=0, column=0, sticky="w")
         ttk.Button(btns, text="Depois", command=top.destroy).grid(row=0, column=1, sticky="e")
         top.update_idletasks()
@@ -608,6 +638,7 @@ class SistemaReservas:
             self.root.after(2000, self.iniciar_limpeza_automatica)
             if ENABLE_AUTO_UPDATE_CHECK_ON_START:
                 self.root.after(200, lambda: schedule_update_check(self.root))
+            self.root.after(400, lambda: on_app_start(self.root))
             logging.info('startup tasks scheduled')
         else:
             logging.info('startup tasks disabled')

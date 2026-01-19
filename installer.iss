@@ -1,6 +1,6 @@
 ; Preprocessor definitions for easy versioning
 #define MyAppName "Sistema Reservas de Salas"
-#define MyAppVersion "1.2.7"
+#define MyAppVersion "1.2.9"
 #define MyPublisher "Rinaldi"
 #define UseOnedir
 
